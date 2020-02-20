@@ -1,0 +1,195 @@
+libname ILE "/home/linavd0/ILE"; 
+run; 
+ 
+proc freq data=ile.samadult_noformat; 
+tables asislpfl asislpst asintru; 
+run; 
+ 
+proc contents data=ILE.samadult_noformat; 
+run; 
+ 
+*exploring trouble falling asleep and trouble staying asleep; 
+proc freq data=ILE.samadult_noformat; 
+tables ASISLPFL; 
+run; 
+ 
+proc freq data=ILE.samadult_noformat; 
+tables ASISLPST; 
+run; 
+ 
+*dichotomozing "trouble falling asleep" and "trouble staying asleep"; 
+data ILE.samadultclean; 
+set ILE.samadult_noformat; 
+if ASISLPFL in (.,97,98,99) then SLPFLCAT=.; 
+else if ASISLPFL=0 then SLPFLCAT=0; 
+else if ASISLPFL in (1,2,3,4,5,6,7) then SLPFLCAt=1; 
+if ASISLPST in (.,97,98,99) then SLPSTCAT=.; 
+else if ASISLPST=0 then SLPSTCAT=0; 
+else if ASISLPST in (1,2,3,4,5,6,7) then SLPSTCAt=1; 
+run; 
+ 
+proc freq data=ILE.samadultclean; 
+tables slpflcat slpstcat; 
+run; 
+ 
+ 
+*cleaning covariates and creating 4-level variable from trouble falling asleep and trouble staying asleep; 
+*dichotomizing mar_stat; 
+data ILE.samadultclean2; 
+set ILE.samadultclean; 
+*if age_p=. then age_p=.; 
+*if sex=. then sex=.;  
+if mar_stat in (.,0,9) then mar_statcat=.; 
+*widowed, divorced or separated, never married; 
+else if mar_stat in (2,3,4) then mar_statcat=0; 
+*married or living with a partner; 
+else if mar_stat in (1,5) then mar_statcat=1; 
+*renaming race and removing the other categories; 
+*0=NHPI only; 
+*if racerpi2=5 then race=1 
+1=multiple race 
+else if racerpi=6 then race=2; 
+ 
+ 
+*length of time living in neighborhood; 
+if asitenur in (.,7,8,9) then asitenurcat=.; 
+*3 years or less; 
+else if asitenur <=2 then asitenurcat=1; 
+*4-20 years; 
+else if 2<asitenur<=4 then asitenurcat=2; 
+*more than 20 years; 
+else if asitenur=>5 then asitenurcat=3; 
+*depression/anxiety/emotional problem causes difficulty with activity; 
+if fla1ar eq 2 and aflhca17 in (.,7,8,9) then aflhca17=2; 
+else if fla1ar eq 1 and aflhca17 in (.,7,8,9) then aflhca17=.; 
+ 
+ 
+*summing for k10 anxiety/depression score-left out asimuch because too many missing; 
+k10=sum(asisad+asinerv+asirstls+asihopls+asieffrt+asiwthls); 
+ 
+*creating 4 level categorical sleep variable; 
+if SLPFLCAT eq 0 and SLPSTCAT eq 0  then sleepprobs=1; 
+if SLPFLCAT eq 0 and SLPSTCAT eq 1 then sleepprobs=2; 
+if SLPFLCAT eq 1 and SLPSTCAT eq 0 then sleepprobs=3; 
+if SLPFLCAT eq 1 and  SLPSTCAT eq 1 then sleepprobs=4; 
+ 
+*creating dichotomous trust variable, where 1 is "cases"of not trusting; 
+if asintru in (.,7,8,9) then trust=.; 
+else if asintru in (3,4) then trust=1; 
+else if asintru in (1,2) then trust=0; 
+run; 
+ 
+*"so sad nothing cheers you up"past 30 days; 
+*if asisad in (.,7,8,9) then asisadcat=.; 
+*level 1 is so sad nothing cheers you up little or non eof the time; 
+*else if asisad in (4,5) then asisadcat=1; 
+*level 2 i feeling this way some of the time; 
+*else if asisad=3 then asisadcat=2; 
+*level 3 is feeling this way most or all of the time; 
+*else if asisad in (1,2) then asisadcat=3; 
+ 
+*felt hopeless past 30 days; 
+*if asihopls in (.,7,8,9) then asihoplscat=.; 
+*level 1 is little or none of the time; 
+*else if asihopls in (4,5) then asihoplscat=1; 
+*level 2 is hopeless some of the time; 
+*else if asihopls=3 then asihoplscat=2; 
+*level 3 is hopeless all or most of the time; 
+*else if asihopls in (1,2) then asihoplscat=3; 
+ 
+*how often everything was an effort, past 30 days; 
+*if asieffrt in (.,7,8,9) then asieffrtcat=.; 
+*level 1 is little or none of the time; 
+*else if asieffrt in (4,5) then asieffrtcat=1; 
+*level 2 is some of the time; 
+*else if asieffrt=3 then asieffrtcat=2; 
+*level 3 is most or all of the time; 
+*else if asieffrt in (1,2) then asieffrtcat=3; 
+ 
+*how often fetl worthless,past 30 days; 
+*if asiwthls in (.,7,8,9) then asiwthlscat=.; 
+*level 1 is little or none of the time; 
+*else if asiwthls in (4,5) then asiwthlscat=1; 
+*level 2 is worthless some of the time; 
+*else if asiwthls=3 then asiwthlscat=2; 
+*level 3 is worthless all or most of the time; 
+*else if asiwthls in (1,2) then asiwthlscat=3; 
+ 
+ 
+*removing all missing so that final analytic sample is samefor all models; 
+data ILE.samadultclean3; 
+set ILE.samadultclean2; 
+if trust=. then delete; 
+*run; 
+if sleepprobs=. then delete; 
+*run; 
+if age_p=. then delete; 
+if sex=. then delete; 
+if mar_statcat=. then delete; 
+if racerpi2=. then delete; 
+if asitenurcat=. then delete; 
+if aflhca17=. then delete; 
+if k10=. then delete; 
+run; 
+ 
+*getting total sample frequencies for Table 1; 
+proc freq data=ile.samadultclean3; 
+tables trust sex mar_statcat asitenurcat aflhca17 racerpi2; 
+run; 
+*getting stratified frequencies for table 1; 
+proc freq data=ILE.samadultclean3; 
+tables trust*sleepprobs; 
+tables sex*sleepprobs/norow; 
+tables mar_statcat*sleepprobs/norow; 
+tables asitenurcat*sleepprobs/norow; 
+tables aflhca17*sleepprobs/norow; 
+tables racerpi2*sleepprobs/norow; 
+run; 
+ 
+*getting means for SDs for Table 1; 
+proc means data=ile.samadultclean3; 
+var age_P k10; 
+ 
+proc sort data=ile.samadultclean3; 
+by sleepprobs; 
+run; 
+ 
+proc means data=ile.samadultclean3; 
+var age_p; 
+by sleepprobs; 
+run; 
+ 
+proc means data=ile.samadultclean3; 
+var k10; 
+by sleepprobs; 
+run; 
+ 
+*crude logistic regression; 
+proc logistic data=ile.samadultclean3; 
+class sleepprobs (ref="1")/param=ref; 
+model trust (event="1")=sleepprobs; 
+run; 
+ 
+*logistic regression adjsuted only for sex and age; 
+proc logistic data=ile.samadultclean3; 
+class sleepprobs (ref="1")/param=ref; 
+class sex (ref="1")/param=ref; 
+model trust (event="1")=sleepprobs age_p sex; 
+run; 
+ 
+*fully adjusted logistic regression; 
+proc logistic data=ile.samadultclean3; 
+class sleepprobs (ref="1")/param=ref; 
+class sex (ref="1")/param=ref; 
+class mar_statcat (ref="0")/param=ref; 
+class asitenurcat (ref="1")/param=ref; 
+class aflhca17 (ref="2")/param=ref; 
+class racerpi2/param=ref; 
+model trust (event="1")=sleepprobs age_p sex mar_statcat asitenurcat aflhca17 k10 racerpi2; 
+run; 
+ 
+*table 2 frequencies; 
+proc freq data=ile.samadultclean3; 
+tables sleepprobs*trust/norow; 
+run; 
+
